@@ -357,4 +357,121 @@ garanti:
   client_id: '100104' 
   login: 'paymentuser'
   password: 'userpayment'
-  
+
+litle:
+  login: 
+  password: 
+  merchant_key: 
+
+litle_address_1:
+  name: John Smith
+  address1: 1 Main St.
+  city: Burlington
+  state: MA
+  zip: '01803-3747'
+  country: US
+litle_card_1:
+  number: '4457010000000009'
+  month: 1
+  year: 2009
+  verification_value: 349
+
+litle_address_2:
+  name: Mike J. Hammer
+  address1: 2 Main St.
+  address2: Apt. 222
+  city: Riverside
+  state: RI
+  zip: '02915'
+  country: US
+litle_card_2:
+  number: '5112010000000003'
+  month: 2
+  year: 2009
+  verification_value: 261
+
+litle_address_3:
+  name: Eileen Jones
+  address1: 3 Main St.
+  city: Boolmfield
+  state: CT
+  zip: '06002'
+  country: US
+litle_card_3:
+  number: '6011010000000003'
+  month: 3
+  year: 2009
+  verification_value: 758
+
+litle_address_4:
+  name: Bob Black
+  address1: 4 Main St.
+  city: Laurel
+  state: MD
+  zip: '20708'
+  country: US
+litle_card_4:
+  number: '375001000000005'
+  month: 4
+  year: 2009
+  verification_value: 261
+
+litle_card_5:
+  number: '4457010200000007'
+  month: 5
+  year: 2009
+  verification_value: 463
+
+litle_address_6:
+  name: Joe Green
+  address1: 6 Main St.
+  city: Derry
+  state: NH
+  zip: '03038'
+  country: US
+litle_card_6:
+  number: '4457010100000008'
+  month: 6
+  year: 2009
+  verification_value: 992
+
+litle_address_7:
+  name: Jane Murray
+  address1: 7 Main St.
+  city: Amesbury
+  state: MA
+  zip: '01913'
+  country: US
+litle_card_7:
+  number: '5112010100000002'
+  month: 7
+  year: 2009
+  verification_value: 251
+
+litle_address_8:
+  name: Mark Johnson
+  address1: 8 Main St.
+  city: Manchester
+  state: NH
+  zip: '03101'
+  country: US
+litle_card_8:
+  number: '6011010100000002'
+  month: 8
+  year: 2009
+  verification_value: 184
+
+litle_address_9:
+  name: James Miller
+  address1: 9 Main St.
+  city: Boston
+  state: MA
+  zip: '02134'
+  country: US
+litle_card_9:
+  number: '375001010000003'
+  month: 9
+  year: 2009
+  verification_value: 0421
+
+
