@@ -107,6 +107,16 @@ module ActiveMerchant #:nodoc:
         '34' => 'I',
         '40' => 'U',
       }
+      
+      ORDER_SOURCE_3DSAUTH      = '3dsAuthenticated'
+      ORDER_SOURCE_3DSATTEMPT   = '3dsAuthenticated'
+      ORDER_SOURCE_ECOMMERCE    = 'ecommerce'
+      ORDER_SOURCE_INSTALLMENT  = 'installment'
+      ORDER_SOURCE_MAILORDER    = 'mailorder'
+      ORDER_SOURCE_RECURRING    = 'recurring'
+      ORDER_SOURCE_RETAIL       = 'retail'
+      ORDER_SOURCE_TELEPHONE    = 'telephone'
+      
       cattr_accessor :logger
       self.logger = nil
 
@@ -127,7 +137,7 @@ module ActiveMerchant #:nodoc:
           txns.empty? ? [] : commit_batch(build_batch_request(:authorization_txns => txns))
         else
           money, authorization, options = args
-          commit_online('authorization', build_authorization_request(money, authorization, options))
+          commit_online('authorization', build_authorization_request(money, authorization, parse_options(options)))
         end
       end
 
@@ -138,7 +148,7 @@ module ActiveMerchant #:nodoc:
           txns.empty? ? [] : commit_batch(build_batch_request(:capture_txns => txns))
         else
           money, authorization, options = args
-          commit_online('capture', build_capture_request(money, authorization, options))
+          commit_online('capture', build_capture_request(money, authorization, parse_options(options)))
         end
       end
 
@@ -149,7 +159,7 @@ module ActiveMerchant #:nodoc:
           txns.empty? ? [] :commit_batch(build_batch_request(:credit_txns => txns))
         else
           money, authorization_or_credit_card, options = args
-          commit_online('credit', build_credit_request(money, authorization_or_credit_card, options))
+          commit_online('credit', build_credit_request(money, authorization_or_credit_card, parse_options(options)))
         end
       end
 
@@ -159,7 +169,7 @@ module ActiveMerchant #:nodoc:
           txns.empty? ? [] : commit_batch(build_batch_request(:sale_txns => txns))
         else
           money, credit_card, options = args
-          commit_online('sale', build_sale_request(money, credit_card, options))
+          commit_online('sale', build_sale_request(money, credit_card, parse_options(options)))
         end
       end
 
@@ -172,11 +182,11 @@ module ActiveMerchant #:nodoc:
         elsif args.first.is_a?(Numeric) or args.first == nil
           money, authorization, options = args
           options ||= {}
-          commit_online('authReversal', build_auth_reversal_request(money, authorization, options))
+          commit_online('authReversal', build_auth_reversal_request(money, authorization, parse_options(options)))
         else
           authorization, options = args
           options ||= {}
-          commit_online('void', build_void_request(authorization, options))
+          commit_online('void', build_void_request(authorization, parse_options(options)))
         end
       end
 
@@ -187,7 +197,12 @@ module ActiveMerchant #:nodoc:
       end
 
 
-      private
+    private
+    
+      def parse_options(opts={})
+        {:report_group => 'online', :order_source => ORDER_SOURCE_ECOMMERCE}.merge(opts)
+      end
+    
       def expdate(credit_card)
         year  = format(credit_card.year, :two_digits)
         month = format(credit_card.month, :two_digits)
@@ -233,12 +248,11 @@ module ActiveMerchant #:nodoc:
         id = unique_id(options, options[:order_id])
         @batch_ids << id
         billing_address = options[:billing_address] || options[:address]
-        order_source = options[:order_source] || "ecommerce"
-
+        order_source = options[:order_source]
+        
         # TODO - add customer_id back in
-        # TODO - support reportGroup
         xml = Builder::XmlMarkup.new(:indent => 2)
-        xml.authorization(:id=>id, :reportGroup=>"online", :customerId=>nil) do
+        xml.authorization(:id => id, :reportGroup => options[:report_group], :customerId => nil) do
           xml.orderId(options[:order_id])
           xml.amount(amount(money))
           xml.orderSource(order_source)
@@ -258,8 +272,7 @@ module ActiveMerchant #:nodoc:
       def build_capture_request(money, authorization, options)
         id = unique_id(options, options[:order_id])
         @batch_ids << id
-        capture_options = {:id => id, :reportGroup => 'online',
-          :customerId => nil}
+        capture_options = {:id => id, :reportGroup => options[:report_group], :customerId => nil}
         if options.key?(:partial) and options[:partial]
           capture_options[:partial] = 'true'
         end
@@ -285,9 +298,9 @@ module ActiveMerchant #:nodoc:
         end
 
         xml = Builder::XmlMarkup.new :indent => 2
-        xml.credit :id => id, :reportGroup => 'online', :customerId => nil do
+        xml.credit :id => id, :reportGroup => options[:report_group], :customerId => nil do
           if non_litle
-            order_source = options[:order_source] || "ecommerce"
+            order_source = options[:order_source]
             xml.orderId(options[:order_id])
             xml.amount amount(money)
             xml.orderSource(order_source)
@@ -306,10 +319,10 @@ module ActiveMerchant #:nodoc:
         id = unique_id(options, options[:order_id])
         @batch_ids << id
         billing_address = options[:billing_address] || options[:address]
-        order_source = options[:order_source] || "ecommerce"
+        order_source = options[:order_source]
 
         xml = Builder::XmlMarkup.new(:indent => 2)
-        xml.sale(:id=>id, :reportGroup=>"online", :customerId=>nil) do
+        xml.sale(:id => id, :reportGroup => options[:report_group], :customerId => nil) do
           xml.orderId(options[:order_id])
           xml.amount(amount(money))
           xml.orderSource(order_source)
@@ -331,7 +344,7 @@ module ActiveMerchant #:nodoc:
         id = unique_id(options, litle_txn_id)
         @batch_ids << id
         xml = Builder::XmlMarkup.new :indent => 2
-        xml.void(:id=>id, :reportGroup=>"online", :customerId=>nil) do
+        xml.void(:id => id, :reportGroup => options[:report_group], :customerId => nil) do
           xml.litleTxnId litle_txn_id
         end
         xml.target!
@@ -343,7 +356,7 @@ module ActiveMerchant #:nodoc:
         @batch_ids << id
 
         xml = Builder::XmlMarkup.new :indent => 2
-        xml.authReversal(:id=>id, :reportGroup=>"online", :customerId=>nil) do
+        xml.authReversal(:id => id, :reportGroup => options[:report_group], :customerId => nil) do
           xml.litleTxnId litle_txn_id
           xml.amount amount(money) if money
         end
@@ -402,22 +415,22 @@ module ActiveMerchant #:nodoc:
               :authReversalAmount => opts[:void_txns].inject(0) {|sum, a| a.first.nil? ? sum + 0 : sum + a.first},
               :merchantId => @options[:merchant_key]) do
             opts[:authorization_txns].each do |money, credit_card, options|
-              xml << build_authorization_request(money, credit_card, options)
+              xml << build_authorization_request(money, credit_card, parse_options(options))
             end
             opts[:capture_txns].each do |money, authorization, options|
-              xml << build_capture_request(money, authorization, options)
+              xml << build_capture_request(money, authorization, parse_options(options))
             end
             opts[:credit_txns].each do |money, authorization_or_credit_card, options|
-              xml << build_credit_request(money, authorization_or_credit_card, options)
+              xml << build_credit_request(money, authorization_or_credit_card, parse_options(options))
             end
             opts[:sale_txns].each do |money, credit_card, options|
-              xml << build_sale_request(money, credit_card, options)
+              xml << build_sale_request(money, credit_card, parse_options(options))
             end
             opts[:void_txns].each do |args|
               # cannot batch void requests, only batch authReversals
               if args.first.is_a?(Numeric) or args.first == nil
                 money, authorization, options = args
-                xml << build_auth_reversal_request(money, authorization, options)
+                xml << build_auth_reversal_request(money, authorization, parse_options(options))
               end
             end
           end
@@ -459,6 +472,7 @@ module ActiveMerchant #:nodoc:
             if node.name =~ /^(.+)Response$/
               response[:litle_txn_type] = $1
               response[:txn_id] = node.attributes['id']
+              response[:report_group] = node.attributes['reportGroup']
             end
             parse_element(response, node)
           end
@@ -489,6 +503,7 @@ module ActiveMerchant #:nodoc:
                 if node.name =~ /^(.+)Response$/
                   response[:litle_txn_type] = $1
                   response[:txn_id] = node.attributes['id']
+                  response[:report_group] = node.attributes['reportGroup']
                 end
                 parse_element(response, node)
                 unsorted_responses[node.attributes['id'].to_s] = response

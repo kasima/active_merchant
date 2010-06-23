@@ -1,7 +1,9 @@
 require 'test_helper'
 
 class RemoteLitleTest < Test::Unit::TestCase
-
+  
+  DUMP_TO_STDOUT = false
+  
   LITLE_AUTHORIZATION_TESTS = [
     { :type => 'visa', :success => true, :response_code => '000', :auth_code => '11111',
         :avs_result_code => 'X', :cvv_result_code => 'M' },
@@ -58,8 +60,7 @@ class RemoteLitleTest < Test::Unit::TestCase
     Base.gateway_mode = :test
     Gateway.ssl_strict = false
     @gateway = LitleGateway.new(fixtures(:litle))
-    # uncomment to dump transactions to STDOUT
-    @gateway.logger = Logger.new(STDOUT)
+    @gateway.logger = Logger.new(STDOUT) if DUMP_TO_STDOUT
   end
 
   def test_failed_capture
@@ -170,7 +171,7 @@ class RemoteLitleTest < Test::Unit::TestCase
     assert responses.all? { |r| r.params['litle_txn_type'] == 'credit' }
     assert_equal(5, responses.size)
     assert responses.inject {|success, r| success and r.success?}
-
+    assert_equal('online', response.params['report_group'])
   end
 
   def test_invalid_login
@@ -205,7 +206,8 @@ class RemoteLitleTest < Test::Unit::TestCase
   end
 
 
-  private
+private
+
   def setup_authorize(n)
     card = credit_card(fixtures("litle_card_#{n}".to_sym))
     card.valid?
@@ -213,6 +215,7 @@ class RemoteLitleTest < Test::Unit::TestCase
     options = {:order_id => n}
     begin
       options[:billing_address] = fixtures("litle_address_#{n}".to_sym)
+      options[:report_group] = 'digital'
     rescue StandardError
     end
     amount = "#{n}00#{n}0".to_i
@@ -271,6 +274,7 @@ class RemoteLitleTest < Test::Unit::TestCase
     assert_equal(expected[:avs_result_code], response.avs_result['code'])
     assert_equal(expected[:cvv_result_code], response.cvv_result['code'])
     # Litle specific
+    assert_equal('digital', response.params['report_group'])
     assert_equal(expected[:response_code], response.params['response'])
     assert_equal(LitleGateway::RESPONSE_CODES[response.params['response']], response.message)
     assert_equal(expected[:auth_code], response.params['auth_code'])

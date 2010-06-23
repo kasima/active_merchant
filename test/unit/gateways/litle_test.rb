@@ -14,7 +14,8 @@ class LitleTest < Test::Unit::TestCase
     @options = {
       :order_id => '1',
       :billing_address => address,
-      :description => 'Authorize test'
+      :description => 'Authorize test',
+      :report_group => 'online'
     }
   end
 
@@ -31,6 +32,7 @@ class LitleTest < Test::Unit::TestCase
     assert_equal(LitleGateway::RESPONSE_CODES[response.params['response']], response.message)
     assert_equal('55555', response.params['auth_code'])
     assert_equal('authorization', response.params['litle_txn_type'])
+    assert_equal('online', response.params['report_group'])
     assert response.test?
 
     @gateway.expects(:ssl_post).returns(successful_capture_response)
@@ -40,6 +42,7 @@ class LitleTest < Test::Unit::TestCase
     assert_equal '27200086782401;', response.authorization
     assert_equal('000', response.params['response'])
     assert_equal('capture', response.params['litle_txn_type'])
+    assert_equal('online', response.params['report_group'])
 
     @gateway.expects(:ssl_post).returns(successful_credit_response)
     assert response = @gateway.credit(@amount, response.authorization, @options)
@@ -48,6 +51,7 @@ class LitleTest < Test::Unit::TestCase
     assert_equal '27200086782401;', response.authorization
     assert_equal('000', response.params['response'])
     assert_equal('credit', response.params['litle_txn_type'])
+    assert_equal('online', response.params['report_group'])
   end
 
   def test_failed_authorize_request
@@ -163,7 +167,8 @@ class LitleTest < Test::Unit::TestCase
       :order_id => '1',
       :txn_id => '1',
       :billing_address => address,
-      :description => 'Authorize test'
+      :description => 'Authorize test',
+      :report_group => 'digital'
     }
     authorize_txn_1 = [@amount, @credit_card, options_1]
 
@@ -171,16 +176,20 @@ class LitleTest < Test::Unit::TestCase
       :order_id => '2',
       :txn_id => '2',
       :billing_address => address,
-      :description => 'Authorize test'
+      :description => 'Authorize test',
+      :report_group => 'physical'
     }
     authorize_txn_2 = [@amount, @credit_card, options_2]
 
+    # the response comes back out of order
     assert responses = @gateway.authorize([authorize_txn_1, authorize_txn_2])
     responses.each do |response|
       assert_success response
     end
     assert_equal('1', responses.first.params['order_id'])
+    assert_equal('digital', responses.first.params['report_group'])
     assert_equal('2', responses.last.params['order_id'])
+    assert_equal('physical', responses.last.params['report_group'])
   end
 
   def test_sanitize
@@ -268,7 +277,7 @@ class LitleTest < Test::Unit::TestCase
           id="123" response="0" message="Valid Format"
           litleSessionId="987654321">
       <batchResponse id="01234567" litleBatchId="4455667788" merchantId="100">
-        <authorizationResponse id="2" reportGroup="RG27">
+        <authorizationResponse id="2" reportGroup="physical">
           <litleTxnId>84568456</litleTxnId>
           <orderId>2</orderId>
           <response>000</response>
@@ -279,7 +288,7 @@ class LitleTest < Test::Unit::TestCase
             <avsResult>00</avsResult>
           </fraudResult>
         </authorizationResponse>
-        <authorizationResponse id="1" reportGroup="RG12">
+        <authorizationResponse id="1" reportGroup="digital">
           <litleTxnId>84568457</litleTxnId>
           <orderId>1</orderId>
           <response>000</response>
