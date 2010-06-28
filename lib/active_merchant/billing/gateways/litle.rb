@@ -200,7 +200,9 @@ module ActiveMerchant #:nodoc:
     private
     
       def parse_options(opts={})
-        {:report_group => 'online', :order_source => ORDER_SOURCE_ECOMMERCE}.merge(opts)
+        options = {:report_group => 'online', :order_source => ORDER_SOURCE_ECOMMERCE}.merge(opts)
+        options[:report_group] = 'online' unless options[:report_group]
+        options
       end
     
       def expdate(credit_card)

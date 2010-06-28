@@ -15,7 +15,7 @@ class LitleTest < Test::Unit::TestCase
       :order_id => '1',
       :billing_address => address,
       :description => 'Authorize test',
-      :report_group => 'online'
+      :report_group => ''
     }
   end
 
