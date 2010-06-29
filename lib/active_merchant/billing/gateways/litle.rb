@@ -322,7 +322,6 @@ module ActiveMerchant #:nodoc:
         @batch_ids << id
         billing_address = options[:billing_address] || options[:address]
         order_source = options[:order_source]
-
         xml = Builder::XmlMarkup.new(:indent => 2)
         xml.sale(:id => id, :reportGroup => options[:report_group], :customerId => nil) do
           xml.orderId(options[:order_id])

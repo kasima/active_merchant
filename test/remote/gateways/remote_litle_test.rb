@@ -1,9 +1,13 @@
 require 'test_helper'
 
 class RemoteLitleTest < Test::Unit::TestCase
+  # NOTE - These tests implement all of Litle's merchant certification criteria.  However, there may 
+  # be configuration issues on Litle's side that cause some of the tests to fail.  Their test 
+  # gateway responses may not match their documentation until the merchant account is configured
+  # correctly.
   
   DUMP_TO_STDOUT = false
-  
+
   LITLE_AUTHORIZATION_TESTS = [
     { :type => 'visa', :success => true, :response_code => '000', :auth_code => '11111',
         :avs_result_code => 'X', :cvv_result_code => 'M' },
@@ -70,7 +74,7 @@ class RemoteLitleTest < Test::Unit::TestCase
     assert_equal('360', response.params['response'])
     assert response.params['litle_txn_type'] == 'capture'
   end
-
+  
   def test_batch_transaction
     authorization_txns = Array.new(9) {|n| setup_authorize n+1}
     assert responses = @gateway.authorize(authorization_txns)
@@ -83,14 +87,14 @@ class RemoteLitleTest < Test::Unit::TestCase
         authorizations[n-1] = responses[n-1].authorization
       end
     end
-
+  
     # test capture
     capture_txns = authorizations.map {|k, v| [authorization_txns[k].first, v, authorization_txns[k].last]}
     assert responses = @gateway.capture(capture_txns)
     assert responses.all? { |r| r.params['litle_txn_type'] == 'capture' }
     assert_equal(5, responses.size)
     assert responses.all? {| r| r.success? }
-
+  
     # test credit
     authorizations.keys.each {|k| authorizations[k] = responses.shift.authorization}
     credit_txns = authorizations.map {|k, v| [authorization_txns[k].first, v, authorization_txns[k].last]}
@@ -100,11 +104,12 @@ class RemoteLitleTest < Test::Unit::TestCase
     assert responses.all? { |r| r.success? }
   end
 
+  # NOTE - This test takes a long time
   # def test_large_batch_transaction
   #   # use a gateway without logging
   #   gateway = LitleGateway.new(fixtures(:litle))
   #   gateway.logger = nil
-  #
+  # 
   #   authorization_txns = []
   #   (1..1000).each do |m|
   #     (1..9).each do |n|
@@ -123,7 +128,7 @@ class RemoteLitleTest < Test::Unit::TestCase
     authorizations = []
     (1..9).each { |n| verify_authorize_response(n, responses[n-1]) }
   end
-
+  
   def test_batch_authorize_auth_reversal
     authorization_txns = Array.new(9) {|n| setup_authorize n+1}
     assert responses = @gateway.authorize(authorization_txns)
@@ -136,7 +141,7 @@ class RemoteLitleTest < Test::Unit::TestCase
         authorizations[n-1] = responses[n-1].authorization
       end
     end
-
+  
     # test auth reversal
     capture_txns = []
     LITLE_AUTH_REVERSAL_TESTS.each_index do |n|
@@ -147,7 +152,7 @@ class RemoteLitleTest < Test::Unit::TestCase
     assert capture_responses.all? { |r| r.params['litle_txn_type'] == 'capture' }
     assert_equal(2, capture_responses.size)
     assert capture_responses.all? { |r| r.success? }
-
+  
     void_txns = (0..3).map { |n| [LITLE_AUTH_REVERSAL_TESTS[n][:reversal_amount], authorizations[n]] }
     assert void_responses = @gateway.void(void_txns)
     assert void_responses.all? { |r| r.params['litle_txn_type'] == 'authReversal' }
@@ -156,7 +161,7 @@ class RemoteLitleTest < Test::Unit::TestCase
       verify_auth_reversal_response(n, void_responses[n-1])
     end
   end
-
+  
   def test_non_litle_credit
     (1..5).each do |n|
       amount, card, options = setup_authorize n
@@ -164,16 +169,16 @@ class RemoteLitleTest < Test::Unit::TestCase
       assert_success response
       assert_equal('credit', response.params['litle_txn_type'])
     end
-
+  
     # batch
     credit_txns = (1..5).map {|n| setup_authorize n}
     responses = @gateway.credit(credit_txns)
     assert responses.all? { |r| r.params['litle_txn_type'] == 'credit' }
     assert_equal(5, responses.size)
     assert responses.inject {|success, r| success and r.success?}
-    assert_equal('online', response.params['report_group'])
+    assert responses.all? { |r| r.params['report_group'] == 'digital' }
   end
-
+  
   def test_invalid_login
     amount, card, options = setup_authorize 1
     gateway = LitleGateway.new(
@@ -184,21 +189,21 @@ class RemoteLitleTest < Test::Unit::TestCase
     assert_failure response
     assert_equal 'System Error - Call Litle & Co.', response.message
   end
-
+  
   def test_request_for_response
     assert responses = @gateway.request_for_response('27512132609')
   end
-
+  
   def test_empty_batch_request
     response = @gateway.authorize([])
     assert response.empty?
   end
-
+  
   def test_partial_capture
     amount, card, options = setup_authorize 1
     assert response = @gateway.authorize(amount, card, options)
     verify_authorize_response(1, response)
-
+  
     options[:partial] = true
     assert response = @gateway.capture(amount/2, response.authorization, options)
     assert response.params['litle_txn_type'] == 'capture'
@@ -213,10 +218,12 @@ private
     card.valid?
     assert_equal(LITLE_AUTHORIZATION_TESTS[n-1][:type], card.type)
     options = {:order_id => n}
+    # all txns built with setup_authorize tests a non-default report_group
+    options[:report_group] = 'digital'
     begin
       options[:billing_address] = fixtures("litle_address_#{n}".to_sym)
-      options[:report_group] = 'digital'
     rescue StandardError
+      # test case 5 has no address
     end
     amount = "#{n}00#{n}0".to_i
     [amount, card, options]
